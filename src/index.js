@@ -101,6 +101,7 @@ function make_groups() {
       const B = data_points[j];
       if (!B || explored.has(B) || A.toString() === B.toString()) {
         groups.push(A);
+        explored.add(A);
         console.log("lonely point");
         continue;
       }
