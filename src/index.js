@@ -97,7 +97,7 @@ function make_groups() {
     }
 
     const group_candidates = {};
-    for (let j = i + 1; j < data_points.length; j++) {
+    for (let j = i + 1; j < data_points.length - 1; j++) {
       const B = data_points[j];
       if (!B || explored.has(B) || A.toString() === B.toString()) {
         groups.push(A);
@@ -119,6 +119,7 @@ function make_groups() {
         const C = tensor_B.add(relation_model).arraySync();
         next_component = data_point_exists(C, data_points);
         if (next_component) {
+          console.log("next_component", next_component);
           group_candidates[id] = [...group_candidates[id], next_component];
         }
       }
