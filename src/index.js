@@ -1,6 +1,7 @@
 import * as tf from "@tensorflow/tfjs-core";
 
 import "./styles.css";
+import { exp } from "@tensorflow/tfjs-core";
 
 const canvas_size = 500;
 const unit_size = 50;
@@ -87,22 +88,26 @@ const data_point_exists = (A, target_array) => {
   return data_points.find(B => B.toString() === A.toString());
 };
 
-const groups = [];
-const explored = new Set();
 function make_groups() {
+  const groups = [];
+  const explored = new Set();
   for (let i = 0; i < data_points.length; i++) {
     const A = data_points[i];
-    if (!A || explored.has(A)) {
+    console.log("A", A);
+    if (!A || explored.has(A.join("_"))) {
+      continue;
+    }
+    if (i === data_points.length - 1) {
+      groups.push([A]);
+      explored.add(A.join("_"));
       continue;
     }
 
     const group_candidates = {};
-    for (let j = i + 1; j < data_points.length - 1; j++) {
+    for (let j = i + 1; j <= data_points.length; j++) {
       const B = data_points[j];
-      if (!B || explored.has(B) || A.toString() === B.toString()) {
-        groups.push(A);
-        explored.add(A);
-        console.log("lonely point");
+      console.log("B", B);
+      if (!B || A.toString() === B.toString() || explored.has(B.join("_"))) {
         continue;
       }
       let next_component = B;
@@ -117,9 +122,14 @@ function make_groups() {
         const tensor_B = tf.tensor(next_component);
 
         const C = tensor_B.add(relation_model).arraySync();
+        const D = tensor_B.sub(relation_model).arraySync();
         next_component = data_point_exists(C, data_points);
+        // next_component =
+        //   next_component ||
+        //   (data_point_exists(D, data_points) &&
+        //     !data_point_exists(D, group_candidates[id]));
+
         if (next_component) {
-          console.log("next_component", next_component);
           group_candidates[id] = [...group_candidates[id], next_component];
         }
       }
@@ -134,10 +144,11 @@ function make_groups() {
       []
     );
     if (largest_group.length > 0) {
+      console.log("adding to groups", largest_group);
       groups.push(largest_group);
     }
     largest_group.forEach(point => {
-      explored.add(point);
+      explored.add(point.join("_"));
     });
   }
   console.log(groups);
