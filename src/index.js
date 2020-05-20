@@ -111,29 +111,33 @@ function make_groups() {
         continue;
       }
       let next_component = B;
-      const relation_model = relational_model_between(A, B);
-      const id = `${A.join("_")}_${relation_model.arraySync().join("_")}`;
-      if (!group_candidates[id]) {
-        group_candidates[id] = [A, B];
-      }
-      let max_loop = 100;
+      let relation_model = relational_model_between(A, B);
+      let id = `${A.join("_")}_${relation_model.arraySync().join("_")}`;
+      let max_loop = 200;
       while (next_component && max_loop > 0) {
         max_loop--;
         const tensor_B = tf.tensor(next_component);
-
         const C = tensor_B.add(relation_model).arraySync();
-        const D = tensor_B.sub(relation_model).arraySync();
+        group_candidates[id] = [next_component];
         next_component = data_point_exists(C, data_points);
-        // next_component =
-        //   next_component ||
-        //   (data_point_exists(D, data_points) &&
-        //     !data_point_exists(D, group_candidates[id]));
+      }
 
+      // Last valid component was savec in the group_candidate
+      next_component = group_candidates[id][0];
+      console.log("reached end of model at", next_component);
+      while (next_component && max_loop > 0) {
+        max_loop--;
+        const tensor_B = tf.tensor(next_component);
+        const C = tensor_B.sub(relation_model).arraySync();
+        next_component = data_point_exists(C, data_points);
         if (next_component) {
+          console.log(next_component);
+          console.log(`Adding to candidates ${id}`);
           group_candidates[id] = [...group_candidates[id], next_component];
         }
       }
     }
+    console.log(group_candidates);
     const largest_group = Object.values(group_candidates).reduce(
       (acc, group) => {
         if (acc.length < group.length) {
