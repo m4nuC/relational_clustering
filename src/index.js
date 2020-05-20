@@ -16,6 +16,7 @@ const add_btn = document.getElementById("add_btn");
 const make_groups_btn = document.getElementById("make_groups_btn");
 
 let data_points = [];
+let range = n => Array.from(Array(n).keys());
 
 const whipe_canvas = (canvas, size) => {
   canvas.width = size;
@@ -98,7 +99,7 @@ function make_groups() {
       continue;
     }
     if (i === data_points.length - 1) {
-      groups.push([A]);
+      groups.push([[0, 0], A, 1]);
       explored.add(A.join("_"));
       continue;
     }
@@ -114,19 +115,25 @@ function make_groups() {
       let relation_model = relational_model_between(A, B);
       let id = `${A.join("_")}_${relation_model.arraySync().join("_")}`;
       let max_loop = 200;
+      let start_component = next_component;
+      let component_count = 1;
       while (next_component && max_loop > 0) {
         max_loop--;
+        component_count++;
         const tensor_B = tf.tensor(next_component);
         const C = tensor_B.add(relation_model).arraySync();
-        group_candidates[id] = [next_component];
+        start_component = next_component;
         next_component = data_point_exists(C, data_points);
       }
 
-      // Last valid component was savec in the group_candidate
-      next_component = group_candidates[id][0];
-      console.log("reached end of model at", next_component);
+      console.log("reached end of model at", start_component);
+      group_candidates[id] = [
+        [relation_model.arraySync(), next_component, component_count]
+      ];
+      next_component = start_component;
       while (next_component && max_loop > 0) {
         max_loop--;
+        console.log(next_component);
         const tensor_B = tf.tensor(next_component);
         const C = tensor_B.sub(relation_model).arraySync();
         next_component = data_point_exists(C, data_points);
@@ -135,25 +142,36 @@ function make_groups() {
         }
         if (next_component) {
           console.log(`Adding to candidates ${id}`);
-          group_candidates[id] = [...group_candidates[id], next_component];
+          group_candidates[id] = [
+            relation_model.arraySync(),
+            next_component,
+            component_count
+          ];
         }
       }
     }
     console.log(group_candidates);
     const largest_group = Object.values(group_candidates).reduce(
       (acc, group) => {
-        if (acc.length < group.length) {
+        if (acc[2] < group[2]) {
           return group;
         }
         return acc;
-      },
-      []
+      }
     );
-    if (largest_group.length > 0) {
-      console.log("adding to groups", largest_group);
-      groups.push(largest_group);
-    }
-    largest_group.forEach(point => {
+    console.log("largest_group", largest_group);
+
+    groups.push(largest_group);
+    console.log(largest_group);
+    const units = range(largest_group[2]).map((_, i) => {
+      console.log(i);
+      return [
+        largest_group[1][0] + largest_group[0][0] * i,
+        largest_group[1][1] + largest_group[0][1] * i
+      ];
+    }); // Index 2 is the length of the group
+    console.log("units", units);
+    units.forEach(point => {
       explored.add(point.join("_"));
     });
   }
